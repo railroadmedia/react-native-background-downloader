@@ -24,6 +24,7 @@ import com.tonyodev.fetch2.Request;
 import com.tonyodev.fetch2.Status;
 import com.tonyodev.fetch2core.DownloadBlock;
 import com.tonyodev.fetch2core.Func;
+import com.tonyodev.fetch2okhttp.OkHttpDownloader;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -39,6 +40,9 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
+
+import okhttp3.OkHttpClient;
+
 
 public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule implements FetchListener {
 
@@ -78,8 +82,11 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
     super(reactContext);
 
     loadConfigMap();
+    OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
     FetchConfiguration fetchConfiguration = new FetchConfiguration.Builder(this.getReactApplicationContext())
+            .setHttpDownloader(new OkHttpDownloader(okHttpClient))
             .setDownloadConcurrentLimit(4)
+            .setProgressReportingInterval(500)
             .setNamespace("RNBackgroundDownloader")
             .build();
     fetch = Fetch.Impl.getInstance(fetchConfiguration);
@@ -321,36 +328,39 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
 
   @Override
   public void onProgress(Download download, long l, long l1) {
-    synchronized(sharedLock) {
+    synchronized (sharedLock) {
       RNBGDTaskConfig config = requestIdToConfig.get(download.getId());
       if (config == null) {
         return;
       }
 
-      WritableMap params = Arguments.createMap();
-      params.putString("id", config.id);
 
       if (!config.reportedBegin) {
-        params.putInt("expectedBytes", (int)download.getTotal());
+        WritableMap params = Arguments.createMap();
+        params.putString("id", config.id);
+        params.putInt("expectedBytes", (int) download.getTotal());
         ee.emit("downloadBegin", params);
         config.reportedBegin = true;
-      } else {
-        params.putInt("written", (int)download.getDownloaded());
-        params.putInt("total", (int)download.getTotal());
-        params.putDouble("percent", ((double)download.getProgress()) / 100);
-        progressReports.put(config.id, params);
-        Date now = new Date();
-        if (now.getTime() - lastProgressReport.getTime() > 1500) {
-          WritableArray reportsArray = Arguments.createArray();
-          for (WritableMap report : progressReports.values()) {
-            reportsArray.pushMap(report);
-          }
-          ee.emit("downloadProgress", reportsArray);
-          lastProgressReport = now;
-          progressReports.clear();
+      }
+
+      WritableMap params = Arguments.createMap();
+      params.putString("id", config.id);
+      params.putInt("written", (int) download.getDownloaded());
+      params.putInt("total", (int) download.getTotal());
+      params.putDouble("percent", ((double) download.getProgress()) / 100);
+      progressReports.put(config.id, params);
+      Date now = new Date();
+      if (now.getTime() - lastProgressReport.getTime() > 500) {
+        WritableArray reportsArray = Arguments.createArray();
+        for (WritableMap report : progressReports.values()) {
+          reportsArray.pushMap(report);
         }
+        ee.emit("downloadProgress", reportsArray);
+        lastProgressReport = now;
+        progressReports.clear();
       }
     }
+  }
   }
 
   @Override

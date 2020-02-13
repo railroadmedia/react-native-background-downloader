@@ -248,7 +248,7 @@ RCT_EXPORT_METHOD(checkForExistingDownloads: (RCTPromiseResolveBlock)resolve rej
             }
             
             NSDate *now = [[NSDate alloc] init];
-            if ([now timeIntervalSinceDate:lastProgressReport] > 1.5 && progressReports.count > 0) {
+            if ([now timeIntervalSinceDate:lastProgressReport] > 0.5 && progressReports.count > 0) {
                 if (self.bridge) {
                     [self sendEventWithName:@"downloadProgress" body:[progressReports allValues]];
                 }
