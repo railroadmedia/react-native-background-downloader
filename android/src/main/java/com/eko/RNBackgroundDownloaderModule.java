@@ -361,7 +361,7 @@ public class RNBackgroundDownloaderModule extends ReactContextBaseJavaModule imp
       }
     }
   }
-  }
+
 
   @Override
   public void onPaused(Download download) {
