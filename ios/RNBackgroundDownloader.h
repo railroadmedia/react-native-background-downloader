@@ -15,7 +15,7 @@
 #import "RCTEventEmitter.h"
 #endif
 
-typedef void (^CompletionHandler)();
+typedef void (^CompletionHandler)(void);
 
 @interface RNBackgroundDownloader : RCTEventEmitter <RCTBridgeModule, NSURLSessionDelegate, NSURLSessionDownloadDelegate>
 
